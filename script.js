@@ -3,7 +3,6 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const startBtn = document.getElementById("startBtn");
 
-// 适配手机分辨率
 function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = window.innerWidth * dpr;
@@ -12,11 +11,9 @@ function resizeCanvas() {
   canvas.style.height = window.innerHeight + "px";
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
-
 resizeCanvas();
-window.addEventListener("resize", resizeCanvas);
 
-// 画圣诞树
+// ================== 圣诞树 ==================
 function drawChristmasTree(cx, cy, scale, angle) {
   ctx.save();
   ctx.translate(cx, cy);
@@ -37,7 +34,7 @@ function drawChristmasTree(cx, cy, scale, angle) {
   ctx.restore();
 }
 
-// MediaPipe Hands
+// ================== MediaPipe Hands ==================
 const hands = new Hands({
   locateFile: (file) =>
     `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
@@ -54,26 +51,28 @@ hands.onResults((results) => {
 
   if (!results.image) return;
 
-  // 镜像画面
   ctx.save();
   ctx.scale(-1, 1);
-  ctx.drawImage(results.image, -canvas.width, 0, canvas.width, canvas.height);
+  ctx.drawImage(
+    results.image,
+    -canvas.width,
+    0,
+    canvas.width,
+    canvas.height
+  );
   ctx.restore();
 
   if (!results.multiHandLandmarks) return;
 
   const lm = results.multiHandLandmarks[0];
 
-  // 缩放
   const dx = lm[4].x - lm[8].x;
   const dy = lm[4].y - lm[8].y;
-  const scale = Math.min(Math.max(Math.sqrt(dx*dx + dy*dy) * 5, 0.5), 3);
+  const scale = Math.min(Math.max(Math.sqrt(dx * dx + dy * dy) * 5, 0.5), 3);
 
-  // 旋转
   const angle =
     Math.atan2(lm[12].y - lm[0].y, lm[12].x - lm[0].x) + Math.PI / 2;
 
-  // 四指张开
   const isOpen =
     lm[8].y < lm[6].y &&
     lm[12].y < lm[10].y &&
@@ -86,30 +85,39 @@ hands.onResults((results) => {
 
   if (isOpen) {
     ctx.fillStyle = "red";
-    ctx.fillRect(
-      canvas.width / 2 - 60,
-      canvas.height / 2 - 60,
-      120,
-      120
-    );
-
+    ctx.fillRect(canvas.width / 2 - 60, canvas.height / 2 - 60, 120, 120);
     ctx.fillStyle = "yellow";
     ctx.font = "26px Arial";
     ctx.fillText("圣诞快乐！", canvas.width / 2 - 70, canvas.height / 2 + 120);
   }
 });
 
-// ⚠️ 关键：必须由用户点击启动摄像头
+// ================== 手机稳定摄像头启动 ==================
 startBtn.onclick = async () => {
-  startBtn.style.display = "none";
+  try {
+    startBtn.innerText = "正在启动摄像头…";
 
-  const camera = new Camera(video, {
-    onFrame: async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "user"
+      },
+      audio: false
+    });
+
+    video.srcObject = stream;
+    await video.play();
+
+    startBtn.style.display = "none";
+
+    async function loop() {
       await hands.send({ image: video });
-    },
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
+      requestAnimationFrame(loop);
+    }
 
-  camera.start();
+    loop();
+
+  } catch (err) {
+    alert("摄像头启动失败：" + err.message);
+    startBtn.innerText = "点击开始（启用摄像头）";
+  }
 };
