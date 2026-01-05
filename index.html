@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Noel AI Controller (Web)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- MediaPipe Hands -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+    #info {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      color: #fff;
+      background: rgba(0,0,0,0.6);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="info">
+    <b>NOEL AI CONTROLLER</b><br/>
+    - Chụm/Xòe ngón cái & trỏ: Phóng to / Thu nhỏ<br/>
+    - Nghiêng bàn tay: Xoay cây thông<br/>
+    - Giơ 4 ngón tay: Hiện hộp quà
+  </div>
+
+  <video id="video" autoplay playsinline style="display:none"></video>
+  <canvas id="canvas"></canvas>
+
+  <script src="script.js"></script>
+</body>
+</html>

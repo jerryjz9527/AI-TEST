@@ -1,0 +1,111 @@
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// 画圣诞树（3 个三角形）
+function drawChristmasTree(cx, cy, scale, angle) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+
+  ctx.fillStyle = "darkgreen";
+
+  for (let i = 0; i < 3; i++) {
+    const size = (60 - i * 15) * scale;
+    const offset = i * 20 * scale;
+
+    ctx.beginPath();
+    ctx.moveTo(0, -size - offset);
+    ctx.lineTo(-size, size - offset);
+    ctx.lineTo(size, size - offset);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// MediaPipe Hands
+const hands = new Hands({
+  locateFile: (file) =>
+    `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+});
+
+hands.setOptions({
+  maxNumHands: 1,
+  minDetectionConfidence: 0.7,
+  minTrackingConfidence: 0.7,
+});
+
+hands.onResults((results) => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 镜像显示
+  ctx.save();
+  ctx.scale(-1, 1);
+  ctx.drawImage(
+    results.image,
+    -canvas.width,
+    0,
+    canvas.width,
+    canvas.height
+  );
+  ctx.restore();
+
+  if (!results.multiHandLandmarks) return;
+
+  const lm = results.multiHandLandmarks[0];
+
+  // 缩放：拇指(4) 和 食指(8)
+  const dx = lm[4].x - lm[8].x;
+  const dy = lm[4].y - lm[8].y;
+  let scale = Math.min(Math.max(Math.sqrt(dx * dx + dy * dy) * 5, 0.5), 3);
+
+  // 旋转：手腕(0) -> 中指(12)
+  const angle =
+    Math.atan2(lm[12].y - lm[0].y, lm[12].x - lm[0].x) + Math.PI / 2;
+
+  // 判断 4 指张开
+  const isOpen =
+    lm[8].y < lm[6].y &&
+    lm[12].y < lm[10].y &&
+    lm[16].y < lm[14].y;
+
+  // 树的位置（手掌中心）
+  const cx = lm[9].x * canvas.width;
+  const cy = lm[9].y * canvas.height;
+
+  drawChristmasTree(cx, cy, scale, angle);
+
+  if (isOpen) {
+    ctx.fillStyle = "red";
+    ctx.fillRect(
+      canvas.width / 2 - 60,
+      canvas.height / 2 - 60,
+      120,
+      120
+    );
+
+    ctx.fillStyle = "yellow";
+    ctx.font = "28px Arial";
+    ctx.fillText(
+      "MERRY CHRISTMAS!",
+      canvas.width / 2 - 150,
+      canvas.height / 2 + 120
+    );
+  }
+});
+
+// 启动摄像头
+const camera = new Camera(video, {
+  onFrame: async () => {
+    await hands.send({ image: video });
+  },
+  width: canvas.width,
+  height: canvas.height,
+});
+
+camera.start();
