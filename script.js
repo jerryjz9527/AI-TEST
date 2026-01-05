@@ -1,16 +1,26 @@
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const startBtn = document.getElementById("startBtn");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+// 适配手机分辨率
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  canvas.style.width = window.innerWidth + "px";
+  canvas.style.height = window.innerHeight + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
 
-// 画圣诞树（3 个三角形）
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+// 画圣诞树
 function drawChristmasTree(cx, cy, scale, angle) {
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(angle);
-
   ctx.fillStyle = "darkgreen";
 
   for (let i = 0; i < 3; i++) {
@@ -24,7 +34,6 @@ function drawChristmasTree(cx, cy, scale, angle) {
     ctx.closePath();
     ctx.fill();
   }
-
   ctx.restore();
 }
 
@@ -43,38 +52,33 @@ hands.setOptions({
 hands.onResults((results) => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 镜像显示
+  if (!results.image) return;
+
+  // 镜像画面
   ctx.save();
   ctx.scale(-1, 1);
-  ctx.drawImage(
-    results.image,
-    -canvas.width,
-    0,
-    canvas.width,
-    canvas.height
-  );
+  ctx.drawImage(results.image, -canvas.width, 0, canvas.width, canvas.height);
   ctx.restore();
 
   if (!results.multiHandLandmarks) return;
 
   const lm = results.multiHandLandmarks[0];
 
-  // 缩放：拇指(4) 和 食指(8)
+  // 缩放
   const dx = lm[4].x - lm[8].x;
   const dy = lm[4].y - lm[8].y;
-  let scale = Math.min(Math.max(Math.sqrt(dx * dx + dy * dy) * 5, 0.5), 3);
+  const scale = Math.min(Math.max(Math.sqrt(dx*dx + dy*dy) * 5, 0.5), 3);
 
-  // 旋转：手腕(0) -> 中指(12)
+  // 旋转
   const angle =
     Math.atan2(lm[12].y - lm[0].y, lm[12].x - lm[0].x) + Math.PI / 2;
 
-  // 判断 4 指张开
+  // 四指张开
   const isOpen =
     lm[8].y < lm[6].y &&
     lm[12].y < lm[10].y &&
     lm[16].y < lm[14].y;
 
-  // 树的位置（手掌中心）
   const cx = lm[9].x * canvas.width;
   const cy = lm[9].y * canvas.height;
 
@@ -90,22 +94,22 @@ hands.onResults((results) => {
     );
 
     ctx.fillStyle = "yellow";
-    ctx.font = "28px Arial";
-    ctx.fillText(
-      "MERRY CHRISTMAS!",
-      canvas.width / 2 - 150,
-      canvas.height / 2 + 120
-    );
+    ctx.font = "26px Arial";
+    ctx.fillText("圣诞快乐！", canvas.width / 2 - 70, canvas.height / 2 + 120);
   }
 });
 
-// 启动摄像头
-const camera = new Camera(video, {
-  onFrame: async () => {
-    await hands.send({ image: video });
-  },
-  width: canvas.width,
-  height: canvas.height,
-});
+// ⚠️ 关键：必须由用户点击启动摄像头
+startBtn.onclick = async () => {
+  startBtn.style.display = "none";
 
-camera.start();
+  const camera = new Camera(video, {
+    onFrame: async () => {
+      await hands.send({ image: video });
+    },
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+
+  camera.start();
+};
